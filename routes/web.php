@@ -10,33 +10,43 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\AuthController;
 
-// Auth routes (no middleware)
+// ================= AUTH =================
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 
-// Protected routes (require admin auth)
+// ================= PROTECTED (ADMIN) =================
 Route::middleware(['admin.auth'])->group(function () {
+
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Reports routes
+    // ================= REPORTS =================
     Route::prefix('reports')->name('reports.')->group(function () {
+
         Route::get('/', [ReportController::class, 'index'])->name('index');
         Route::get('/{id}', [ReportController::class, 'show'])->name('show');
-        
-        // Verify dan Reject: Semua admin bisa akses
-        Route::post('/{id}/update-status', [ReportController::class, 'updateStatus'])->name('update-status');
-        Route::post('/{id}/verify', [ReportController::class, 'verify'])->name('verify');
-        Route::post('/{id}/reject', [ReportController::class, 'reject'])->name('reject');
-        
-        // Delete: Hanya Super Admin
-        Route::delete('/{id}', [ReportController::class, 'destroy'])->name('destroy')->middleware('super.admin');
+
+        Route::post('/{id}/update-status', [ReportController::class, 'updateStatus'])
+            ->name('update-status');
+
+        Route::post('/{id}/verify', [ReportController::class, 'verify'])
+            ->name('verify');
+
+        Route::post('/{id}/unverify', [ReportController::class, 'unverify'])
+            ->name('unverify');
+
+        Route::post('/{id}/reject', [ReportController::class, 'reject'])
+            ->name('reject');
+
+        Route::delete('/{id}', [ReportController::class, 'destroy'])
+            ->name('destroy')
+            ->middleware('super.admin');
     });
 
-    // Categories routes
+    // ================= CATEGORIES =================
     Route::prefix('categories')->name('categories.')->group(function () {
+
         Route::get('/', [CategoryController::class, 'index'])->name('index');
-        
-        // Create, Update, Delete: Hanya Super Admin
+
         Route::middleware('super.admin')->group(function () {
             Route::get('/create', [CategoryController::class, 'create'])->name('create');
             Route::post('/', [CategoryController::class, 'store'])->name('store');
@@ -46,7 +56,7 @@ Route::middleware(['admin.auth'])->group(function () {
         });
     });
 
-    // Profile routes
+    // ================= PROFILE =================
     Route::prefix('profile')->name('profile.')->group(function () {
         Route::get('/', [ProfileController::class, 'index'])->name('index');
         Route::get('/edit', [ProfileController::class, 'edit'])->name('edit');
@@ -55,7 +65,7 @@ Route::middleware(['admin.auth'])->group(function () {
         Route::put('/update-password', [ProfileController::class, 'updatePassword'])->name('update-password');
     });
 
-    // Admins routes (Hanya Super Admin)
+    // ================= ADMINS =================
     Route::prefix('admins')->name('admins.')->middleware('super.admin')->group(function () {
         Route::get('/', [\App\Http\Controllers\AdminController::class, 'index'])->name('index');
         Route::get('/create', [\App\Http\Controllers\AdminController::class, 'create'])->name('create');
@@ -66,7 +76,7 @@ Route::middleware(['admin.auth'])->group(function () {
         Route::patch('/{id}/toggle-status', [\App\Http\Controllers\AdminController::class, 'toggleStatus'])->name('toggle-status');
     });
 
-    // Users routes (Hanya Super Admin)
+    // ================= USERS =================
     Route::prefix('users')->name('users.')->middleware('super.admin')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('index');
         Route::get('/{id}', [UserController::class, 'show'])->name('show');
@@ -75,7 +85,7 @@ Route::middleware(['admin.auth'])->group(function () {
         Route::post('/{id}/unblock', [UserController::class, 'unblock'])->name('unblock');
     });
 
-    // Settings routes (Hanya Super Admin)
+    // ================= SETTINGS =================
     Route::prefix('settings')->name('settings.')->middleware('super.admin')->group(function () {
         Route::get('/', [SettingsController::class, 'index'])->name('index');
         Route::post('/clear-cache', [SettingsController::class, 'clearCache'])->name('clear-cache');
@@ -84,7 +94,7 @@ Route::middleware(['admin.auth'])->group(function () {
         Route::post('/optimize', [SettingsController::class, 'optimize'])->name('optimize');
     });
 
-    // Help routes
+    // ================= HELP =================
     Route::prefix('help')->name('help.')->group(function () {
         Route::get('/', [HelpController::class, 'index'])->name('index');
         Route::get('/documentation', [HelpController::class, 'documentation'])->name('documentation');
@@ -92,6 +102,6 @@ Route::middleware(['admin.auth'])->group(function () {
         Route::post('/submit-ticket', [HelpController::class, 'submitTicket'])->name('submit-ticket');
     });
 
-    // Logout route
+    // ================= LOGOUT =================
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

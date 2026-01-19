@@ -6,21 +6,21 @@ use App\Http\Controllers\Controller;
 use App\Models\Report;
 use App\Models\Category;
 use App\Models\User;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Storage;
 
 class ReportApiController extends Controller
 {
-    // Get all categories
+    // =========================
+    // GET USER REPORTS
+    // =========================
     public function index()
     {
         $user = auth()->user();
 
         if (!$user) {
-            return response()->json([
-                'message' => 'Unauthenticated'
-            ], 401);
+            return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
         $reports = Report::where('user_id', $user->id)
@@ -33,9 +33,27 @@ class ReportApiController extends Controller
             'data' => $reports
         ]);
     }
+// File: app/Http/Controllers/Api/ReportController.php
+
+public function myRecent(Request $request)
+{
+    // Ambil user yang login
+    $user = $request->user();
+
+    // Ambil data: Urutkan Terbaru -> Ambil 3 -> Eksekusi
+    $reports = \App\Models\Report::where('user_id', $user->id)
+                    ->latest() // Otomatis order by created_at DESC
+                    ->take(3)  // Batasi cuma 3
+                    ->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $reports
+    ]);
+}
 
     // =========================
-    // POST REPORT
+    // CREATE REPORT (USER SUBMIT)
     // =========================
     public function store(Request $request)
     {
@@ -50,13 +68,10 @@ class ReportApiController extends Controller
         $user = auth()->user();
 
         if (!$user) {
-            return response()->json([
-                'message' => 'Unauthenticated'
-            ], 401);
+            return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
         $media = [];
-
         if ($request->hasFile('media')) {
             foreach ($request->file('media') as $file) {
                 $media[] = $file->store('reports', 'public');
@@ -74,6 +89,15 @@ class ReportApiController extends Controller
             'is_verified' => false,
         ]);
 
+        // 🔔 NOTIFIKASI: LAPORAN BERHASIL DIKIRIM
+        Notification::create([
+            'user_id' => $user->id,
+            'sender_role' => 'sistem',
+            'message' => 'Laporan berhasil dikirim dan menunggu verifikasi.',
+            'status' => 'pending',
+            'is_read' => false,
+        ]);
+
         return response()->json([
             'success' => true,
             'data' => $report
@@ -81,11 +105,15 @@ class ReportApiController extends Controller
     }
 
     // =========================
-    // GET DETAIL REPORT
+    // GET DETAIL REPORT (USER)
     // =========================
     public function show($id)
     {
         $user = auth()->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
 
         $report = Report::where('id', $id)
             ->where('user_id', $user->id)
@@ -98,97 +126,20 @@ class ReportApiController extends Controller
         ]);
     }
 
+    // =========================
+    // GET CATEGORIES
+    // =========================
     public function getCategories()
     {
-        $categories = Category::all();
         return response()->json([
             'success' => true,
-            'data' => $categories
+            'data' => Category::all()
         ]);
     }
 
-    // Get user reports
-    public function getUserReports($userId)
-    {
-        $reports = Report::with('category')
-            ->where('user_id', $userId)
-            ->latest()
-            ->get()
-            ->map(function($report) {
-                return [
-                    'id' => $report->id,
-                    'user_id' => $report->user_id,
-                    'category_id' => $report->category_id,
-                    'category' => $report->category,
-                    'title' => $report->title,
-                    'description' => $report->description,
-                    'location' => $report->location,
-                    'media' => $report->media,
-                    'status' => $report->status,
-                    'is_verified' => $report->is_verified,
-                    'verified_at' => $report->verified_at,
-                    'verified_by' => $report->verified_by,
-                    'rejection_reason' => $report->rejection_reason,
-                    'admin_response' => $report->admin_response,
-                    'responded_at' => $report->responded_at,
-                    'created_at' => $report->created_at,
-                    'updated_at' => $report->updated_at,
-                ];
-            });
-
-        return response()->json([
-            'success' => true,
-            'data' => $reports
-        ]);
-    }
-
-    // Create new report
-    public function createReport(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'user_id' => 'required|exists:users,id',
-            'category_id' => 'required|exists:categories,id',
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'location' => 'nullable|string',
-            'media' => 'nullable|array',
-            'media.*' => 'file|mimes:jpg,jpeg,png,mp4,mov|max:10240' // Max 10MB
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $mediaFiles = [];
-        if ($request->hasFile('media')) {
-            foreach ($request->file('media') as $file) {
-                $path = $file->store('reports', 'public');
-                $mediaFiles[] = 'storage/' . $path;
-            }
-        }
-
-        $report = Report::create([
-            'user_id' => $request->user_id,
-            'category_id' => $request->category_id,
-            'title' => $request->title,
-            'description' => $request->description,
-            'location' => $request->location,
-            'media' => $mediaFiles,
-            'status' => 'Diproses'
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Report created successfully',
-            'data' => $report->load('category')
-        ], 201);
-    }
-
-    // Get report detail
+    // =========================
+    // GET REPORT DETAIL (ADMIN / PUBLIC)
+    // =========================
     public function getReportDetail($id)
     {
         $report = Report::with(['category', 'user'])->find($id);
@@ -200,81 +151,28 @@ class ReportApiController extends Controller
             ], 404);
         }
 
-        $data = [
-            'id' => $report->id,
-            'user_id' => $report->user_id,
-            'user' => $report->user,
-            'category_id' => $report->category_id,
-            'category' => $report->category,
-            'title' => $report->title,
-            'description' => $report->description,
-            'location' => $report->location,
-            'media' => $report->media,
-            'status' => $report->status,
-            'is_verified' => $report->is_verified,
-            'verified_at' => $report->verified_at,
-            'verified_by' => $report->verified_by,
-            'rejection_reason' => $report->rejection_reason,
-            'admin_response' => $report->admin_response,
-            'responded_at' => $report->responded_at,
-            'created_at' => $report->created_at,
-            'updated_at' => $report->updated_at,
-        ];
-
         return response()->json([
             'success' => true,
-            'data' => $data
+            'data' => $report
         ]);
     }
 
-    // Get or create user
-    public function getOrCreateUser(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'name' => 'required|string',
-            'google_id' => 'nullable|string'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $user = User::firstOrCreate(
-            ['email' => $request->email],
-            [
-                'name' => $request->name,
-                'password' => bcrypt(uniqid()), // Random password for Google users
-            ]
-        );
-
-        return response()->json([
-            'success' => true,
-            'data' => $user
-        ]);
-    }
-
-    // Get statistics
+    // =========================
+    // STATISTICS
+    // =========================
     public function getStatistics()
     {
-        $totalReports = Report::count();
-        $reportsByStatus = Report::selectRaw('status, count(*) as total')
-            ->groupBy('status')
-            ->get();
-        $reportsByCategory = Report::with('category')
-            ->selectRaw('category_id, count(*) as total')
-            ->groupBy('category_id')
-            ->get();
-
         return response()->json([
             'success' => true,
             'data' => [
-                'total_reports' => $totalReports,
-                'by_status' => $reportsByStatus,
-                'by_category' => $reportsByCategory
+                'total_reports' => Report::count(),
+                'by_status' => Report::selectRaw('status, count(*) as total')
+                    ->groupBy('status')
+                    ->get(),
+                'by_category' => Report::selectRaw('category_id, count(*) as total')
+                    ->groupBy('category_id')
+                    ->with('category')
+                    ->get(),
             ]
         ]);
     }

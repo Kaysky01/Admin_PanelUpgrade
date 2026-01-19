@@ -25,14 +25,17 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // HAPUS TOKEN LAMA
         $user->tokens()->delete();
+
+        // BUAT TOKEN SEKALI SAJA
         $token = $user->createToken('mobile')->plainTextToken;
-        
+
         return response()->json([
             'success' => true,
             'data' => [
                 'user'  => $user,
-                'token' => $user->createToken('mobile-token')->plainTextToken,
+                'token' => $token, // ⬅️ TOKEN INI YANG DIPAKAI FLUTTER
             ]
         ]);
     }
@@ -69,7 +72,7 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'user' => $user,
+                'user'  => $user,
                 'token' => $token,
             ],
         ]);

@@ -119,29 +119,40 @@
                     </h6>
                 </div>
                 <div class="card-body">
-                    @if($report->is_verified)
-                        <div class="alert alert-success mb-3">
-                            <i class="fas fa-check-circle me-2"></i><strong>Terverifikasi</strong>
-                            <p class="mb-0 mt-2 small">
-                                Oleh: {{ $report->verified_by }}<br>
-                                Pada: {{ $report->verified_at->format('d M Y H:i') }}
-                            </p>
-                        </div>
-                    @elseif($report->rejection_reason)
-                        <div class="alert alert-danger mb-3">
-                            <i class="fas fa-times-circle me-2"></i><strong>Ditolak</strong>
-                            <p class="mb-0 mt-2 small">
-                                Alasan: {{ $report->rejection_reason }}<br>
-                                Oleh: {{ $report->verified_by }}<br>
-                                Pada: {{ $report->verified_at->format('d M Y H:i') }}
-                            </p>
-                        </div>
-                    @else
-                        <div class="alert alert-warning mb-3">
-                            <i class="fas fa-exclamation-triangle me-2"></i><strong>Menunggu Verifikasi</strong>
-                            <p class="mb-0 mt-2 small">Laporan ini perlu diverifikasi oleh admin</p>
-                        </div>
-                    @endif
+                   @if($report->is_verified)
+    <div class="alert alert-success mb-3">
+        <i class="fas fa-check-circle me-2"></i><strong>Terverifikasi</strong>
+        <p class="mb-0 mt-2 small">
+            Oleh: {{ $report->verified_by }}<br>
+            Pada: {{ $report->verified_at->format('d M Y H:i') }}
+        </p>
+    </div>
+
+    {{-- 🔁 TOMBOL BATAL VERIFIKASI --}}
+    <form action="{{ route('reports.unverify', $report->id) }}" method="POST">
+        @csrf
+        <button type="submit" class="btn btn-warning w-100 mb-2">
+            <i class="fas fa-undo me-1"></i>Batalkan Verifikasi
+        </button>
+    </form>
+
+@elseif($report->rejection_reason)
+    <div class="alert alert-danger mb-3">
+        <i class="fas fa-times-circle me-2"></i><strong>Ditolak</strong>
+        <p class="mb-0 mt-2 small">
+            Alasan: {{ $report->rejection_reason }}<br>
+            Oleh: {{ $report->verified_by }}<br>
+            Pada: {{ $report->verified_at->format('d M Y H:i') }}
+        </p>
+    </div>
+
+@else
+    <div class="alert alert-warning mb-3">
+        <i class="fas fa-exclamation-triangle me-2"></i><strong>Menunggu Verifikasi</strong>
+        <p class="mb-0 mt-2 small">Laporan ini perlu diverifikasi oleh admin</p>
+    </div>
+@endif
+
 
                     @if(!$report->is_verified && !$report->rejection_reason)
                         <form action="{{ route('reports.verify', $report->id) }}" method="POST" class="mb-2">
@@ -181,6 +192,7 @@
                                 <option value="Diproses" {{ $report->status == 'Diproses' ? 'selected' : '' }}>Diproses</option>
                                 <option value="Ditindaklanjuti" {{ $report->status == 'Ditindaklanjuti' ? 'selected' : '' }}>Ditindaklanjuti</option>
                                 <option value="Selesai" {{ $report->status == 'Selesai' ? 'selected' : '' }}>Selesai</option>
+                                
                             </select>
                         </div>
                         <div class="mb-3">

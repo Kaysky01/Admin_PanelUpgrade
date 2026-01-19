@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ReportApiController;
+use App\Http\Controllers\Api\NotificationController;
 
 Route::prefix('v1')->group(function () {
 
@@ -22,5 +23,15 @@ Route::prefix('v1')->group(function () {
         Route::post('/reports', [ReportApiController::class, 'store']);
         Route::get('/reports/{id}', [ReportApiController::class, 'show']);
     });
+
+    Route::middleware('auth:sanctum')->get('/me', function (Request $request) {
+    return response()->json($request->user());
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/read', [NotificationController::class, 'markAllRead']);
+});
+
 
 });
