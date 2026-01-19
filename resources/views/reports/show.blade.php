@@ -1,3 +1,5 @@
+
+
 @extends('layouts.app')
 
 @section('title', 'Detail Laporan')
@@ -43,29 +45,57 @@
                     </div>
                     @endif
 
-                    @if($report->media && count($report->media) > 0)
-                    <div class="mb-4">
-                        <h6 class="text-muted mb-2">
-                            <i class="fas fa-images me-1"></i>Media Lampiran
-                        </h6>
-                        <div class="row g-2">
-                            @foreach($report->media as $media)
-                                @if(Str::endsWith($media, ['.jpg', '.jpeg', '.png', '.gif']))
-                                    <div class="col-md-4">
-                                        <img src="{{ asset($media) }}" class="img-fluid rounded" alt="Media" style="cursor: pointer;" onclick="window.open('{{ asset($media) }}', '_blank')">
-                                    </div>
-                                @elseif(Str::endsWith($media, ['.mp4', '.mov', '.avi']))
-                                    <div class="col-md-6">
-                                        <video controls class="w-100 rounded">
-                                            <source src="{{ asset($media) }}" type="video/mp4">
-                                            Browser Anda tidak mendukung tag video.
-                                        </video>
-                                    </div>
-                                @endif
-                            @endforeach
-                        </div>
+                   @if($report->media && count($report->media) > 0)
+<div class="mb-4">
+    <h6 class="text-muted mb-3">
+        <i class="fas fa-images me-1"></i>Media Lampiran
+    </h6>
+    
+    <div class="row g-3">
+        @foreach($report->media as $media)
+            {{-- Cek Tipe File (Image vs Video) --}}
+            @php
+                $isImage = \Illuminate\Support\Str::endsWith(strtolower($media), ['.jpg', '.jpeg', '.png', '.gif', '.webp']);
+                $isVideo = \Illuminate\Support\Str::endsWith(strtolower($media), ['.mp4', '.mov', '.avi', '.webm']);
+            @endphp
+
+            {{-- TAMPILAN GAMBAR --}}
+            @if($isImage)
+                <div class="col-md-6 col-lg-4">
+                    {{-- Container Kotak Abu-abu --}}
+                    <div class="border rounded bg-light p-2 d-flex align-items-center justify-content-center" style="height: 300px;">
+                        {{-- Link supaya bisa diklik --}}
+                        <a href="{{ asset('storage/' . $media) }}" target="_blank" title="Klik untuk memperbesar">
+                            <img src="{{ asset('storage/' . $media) }}" 
+                                 class="rounded shadow-sm" 
+                                 style="max-height: 280px; max-width: 100%; object-fit: contain;" 
+                                 alt="Bukti Laporan">
+                        </a>
                     </div>
-                    @endif
+                    <div class="text-center mt-1">
+                        <small class="text-muted"><i class="fas fa-search-plus me-1"></i>Klik untuk zoom</small>
+                    </div>
+                </div>
+
+            {{-- TAMPILAN VIDEO --}}
+            @elseif($isVideo)
+                <div class="col-md-6 col-lg-4">
+                    {{-- Container Kotak Abu-abu --}}
+                    <div class="border rounded bg-light p-2 d-flex align-items-center justify-content-center" style="height: 300px;">
+                        <video controls class="rounded shadow-sm" style="max-height: 280px; max-width: 100%;">
+                            <source src="{{ asset('storage/' . $media) }}" type="video/mp4">
+                            Browser Anda tidak mendukung tag video.
+                        </video>
+                    </div>
+                    <div class="text-center mt-1">
+                        <small class="text-muted"><i class="fas fa-video me-1"></i>Video Bukti</small>
+                    </div>
+                </div>
+            @endif
+        @endforeach
+    </div>
+</div>
+@endif
 
                     @if($report->admin_response)
                     <div class="alert alert-info">
